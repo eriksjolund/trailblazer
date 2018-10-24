@@ -100,7 +100,6 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
 
     #DEBUG: uSALT POC, remember to add to config
     if microsalt:
-      import pdb; pdb.set_trace()
       usalt_cli = UsaltCli(context.obj['usalt_binary'])
       if mip_config is None:
         usalt_config = context.obj['usalt_config']

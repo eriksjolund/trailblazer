@@ -14,7 +14,7 @@ class UsaltCli(object):
     def __init__(self, script):
         self.script = script
   
-    def __call__(self, config, family, **kwargs):
+    def __call__(self, family, **kwargs):
         """Execute the pipeline."""
         command = self.build_command(family=family, **kwargs)
         LOG.debug(' '.join(command))
@@ -29,9 +29,11 @@ class UsaltCli(object):
         cmd = "{} start project {}".format(self.script, family)
         cmd = cmd.split(' ')
         for key, value in kwargs.items():
-            #Unary and binary arguments
-            cmd.append("--{}".format(key))
-            if value is not True:
+            #Unary and True
+            if value:
+              cmd.append("--{}".format(key))
+            #Binary
+            if not isinstance(value, bool):
                 cmd.append(value) 
         return cmd
 
