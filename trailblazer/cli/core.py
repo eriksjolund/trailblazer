@@ -5,6 +5,7 @@ import subprocess
 
 import click
 import coloredlogs
+import json
 import ruamel.yaml
 
 import trailblazer
@@ -13,6 +14,7 @@ from trailblazer.log import LogAnalysis
 from trailblazer.mip.start import MipCli
 from trailblazer.mip.files import parse_config
 from trailblazer.mip.miplog import job_ids
+from trailblazer.usalt.start import UsaltCli
 from trailblazer.exc import MissingFileError, MipStartError
 from .utils import environ_email
 from .clean import clean
@@ -75,9 +77,10 @@ def log_cmd(context, sampleinfo, sacct, quiet, config):
 @click.option('-d', '--dryrun', is_flag=True, help='only generate SBATCH scripts')
 @click.option('--command', is_flag=True, help='only show the MIP command')
 @click.option('-sw', '--start-with', help='start the pipeline beginning with program, see format for program in mip.pl')
+@click.option('-m', '--microsalt', help='Start microSALT analysis (as opposed to MIP)', default=False, is_flag=True)
 @click.argument('family', required=False)
 @click.pass_context
-def start(context, mip_config, email, priority, dryrun, command, start_with, family):
+def start(context, mip_config, email, priority, dryrun, command, start_with, family, microsalt):
     """Start a new analysis."""
     mip_cli = MipCli(context.obj['script'])
     mip_config = mip_config or context.obj['mip_config']
@@ -93,6 +96,27 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
                 context.obj['store'].add_pending(family, email=email)
         except MipStartError as error:
             click.echo(click.style(error.message, fg='red'))
+
+    #DEBUG: uSALT POC, remember to add to config
+    if microsalt:
+      usalt_cli = UsaltCli()
+      with open(context.obj['usalt_config'], 'r') as conf:
+        tmp_conf = json.load(conf)
+      except Exception as e:
+        pass
+      usalt_config = mip_config or tmp_conf
+      email = email or environ_email()
+      kwargs = dict(config=usalt_config, family=family, email=email, dry=dryrun)
+      if command:
+          usalt_command = usalt_cli.build_command(**kwargs)
+          click.echo(' '.join(usalt_command))
+      else:
+          try:
+              usalt_cli(**kwargs)
+              if not dryrun:
+                  context.obj['store'].add_pending(family, email=email)
+          except MipStartError as error:
+              click.echo(click.style(error.message, fg='red'))
 
 
 @base.command()

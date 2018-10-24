@@ -1,0 +1,10 @@
+---
+database: "mysql+pymysql://trailblazer:St0D5guU6C74WP2P@localhost:3308/trailblazer2"
+
+# MIP
+script: "/mnt/hds/proj/bioinfo/SERVER/miniconda/envs/P_mip-6.0_180203/bin/mip"
+mip_config: "/home/hiseq.clinical/servers/config/mip.v6.0.yaml"
+root: "/mnt/hds/proj/bioinfo/families"
+# uSALT
+usalt_config: "/mnt/hds/proj/bioinfo/develop/git/isak.sylvin/configTest.json"
+
