@@ -16,7 +16,6 @@ class UsaltCli(object):
   
     def __call__(self, config, family, **kwargs):
         """Execute the pipeline."""
-        import pdb; pdb.set_trace()
         command = self.build_command(family=family, **kwargs)
         LOG.debug(' '.join(command))
         process = self.execute(command)
@@ -31,10 +30,8 @@ class UsaltCli(object):
         cmd = cmd.split(' ')
         for key, value in kwargs.items():
             #Unary and binary arguments
-            if value is True:
-                cmd.append("--{}".format(value))
-            else:
-                cmd.append("--{}".format(key))
+            cmd.append("--{}".format(key))
+            if value is not True:
                 cmd.append(value) 
         return cmd
 
