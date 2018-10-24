@@ -12,7 +12,8 @@ class UsaltCli(object):
     """Wrapper around MIP command line interface."""
 
     def __init__(self):
-
+        pass
+  
     def __call__(self, config, family, **kwargs):
         """Execute the pipeline."""
         command = self.build_command(family=family, **kwargs)
