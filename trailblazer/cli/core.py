@@ -102,7 +102,7 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
     if microsalt:
       import pdb; pdb.set_trace()
       usalt_cli = UsaltCli(context.obj['usalt_binary'])
-      if mip_config is not None:
+      if mip_config is None:
         with open(context.obj['usalt_config'], 'r') as conf:
           usalt_config = json.load(conf)
       else:
