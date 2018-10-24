@@ -11,8 +11,8 @@ class UsaltCli(object):
 
     """Wrapper around MIP command line interface."""
 
-    def __init__(self):
-        pass
+    def __init__(self, script):
+        self.script = script
   
     def __call__(self, config, family, **kwargs):
         """Execute the pipeline."""
@@ -26,7 +26,7 @@ class UsaltCli(object):
 
     def build_command(self, family, **kwargs):
         """Builds the command to execute uSALT."""
-        cmd = "microSALT start project {}".format(family)
+        cmd = "{} start project {}".format(self.script, family)
         cmd = cmd.split(' ')
         for key, value in kwargs.items():
             #Unary and binary arguments
