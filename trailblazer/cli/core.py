@@ -103,9 +103,9 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
       import pdb; pdb.set_trace()
       usalt_cli = UsaltCli(context.obj['usalt_binary'])
       if mip_config is None:
-        with open(context.obj['usalt_config'], 'r') as conf:
+        usalt_config = context.obj['usalt_config']
+        #with open(context.obj['usalt_config'], 'r') as conf:
           #usalt_config = json.load(conf)
-          usalt_config = conf
       else:
         usalt_config = mip_config
       email = email or environ_email()
