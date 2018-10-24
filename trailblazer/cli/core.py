@@ -82,20 +82,21 @@ def log_cmd(context, sampleinfo, sacct, quiet, config):
 @click.pass_context
 def start(context, mip_config, email, priority, dryrun, command, start_with, family, microsalt):
     """Start a new analysis."""
-    mip_cli = MipCli(context.obj['script'])
-    mip_config = mip_config or context.obj['mip_config']
-    email = email or environ_email()
-    kwargs = dict(config=mip_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
-    if command:
-        mip_command = mip_cli.build_command(**kwargs)
-        click.echo(' '.join(mip_command))
-    else:
-        try:
-            mip_cli(**kwargs)
-            if not dryrun:
-                context.obj['store'].add_pending(family, email=email)
-        except MipStartError as error:
-            click.echo(click.style(error.message, fg='red'))
+    if not microsalt:
+      mip_cli = MipCli(context.obj['script'])
+      mip_config = mip_config or context.obj['mip_config']
+      email = email or environ_email()
+      kwargs = dict(config=mip_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
+      if command:
+          mip_command = mip_cli.build_command(**kwargs)
+          click.echo(' '.join(mip_command))
+      else:
+          try:
+              mip_cli(**kwargs)
+              if not dryrun:
+                  context.obj['store'].add_pending(family, email=email)
+          except MipStartError as error:
+              click.echo(click.style(error.message, fg='red'))
 
     #DEBUG: uSALT POC, remember to add to config
     if microsalt:
