@@ -16,6 +16,7 @@ class UsaltCli(object):
   
     def __call__(self, config, family, **kwargs):
         """Execute the pipeline."""
+        import pdb; pdb.set_trace()
         command = self.build_command(family=family, **kwargs)
         LOG.debug(' '.join(command))
         process = self.execute(command)
