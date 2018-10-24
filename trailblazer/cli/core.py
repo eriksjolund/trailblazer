@@ -102,9 +102,11 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
     if microsalt:
       import pdb; pdb.set_trace()
       usalt_cli = UsaltCli(context.obj['usalt_binary'])
-      with open(context.obj['usalt_config'], 'r') as conf:
-        tmp_conf = json.load(conf)
-      usalt_config = mip_config or tmp_conf
+      if mip_config is not None:
+        with open(context.obj['usalt_config'], 'r') as conf:
+          usalt_config = json.load(conf)
+      else:
+        usalt_config = mip_config
       email = email or environ_email()
       kwargs = dict(config=usalt_config, family=family, email=email, dry=dryrun)
       if command:
