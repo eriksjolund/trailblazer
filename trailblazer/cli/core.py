@@ -102,8 +102,6 @@ def start(context, mip_config, email, priority, dryrun, command, start_with, fam
       usalt_cli = UsaltCli()
       with open(context.obj['usalt_config'], 'r') as conf:
         tmp_conf = json.load(conf)
-      except Exception as e:
-        pass
       usalt_config = mip_config or tmp_conf
       email = email or environ_email()
       kwargs = dict(config=usalt_config, family=family, email=email, dry=dryrun)
