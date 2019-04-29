@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from trailblazer import log, exc
-from trailblazer.log import LogAnalysis
+from trailblazer import exc
+from trailblazer.mip import log
 
 
 @pytest.mark.parametrize('kwargs, expected_status', [

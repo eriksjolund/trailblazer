@@ -15,6 +15,14 @@ class MipStartError(TrailblazerError):
     pass
 
 
+class BalsamicStartError(TrailblazerError):
+    pass
+
+
+class UsaltStartError(TrailblazerError):
+    pass
+
+
 class ConfigError(TrailblazerError):
 
     def __init__(self, message, errors=None):

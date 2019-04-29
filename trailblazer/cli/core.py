@@ -9,16 +9,24 @@ import ruamel.yaml
 
 import trailblazer
 from trailblazer.store import Store
-from trailblazer.log import LogAnalysis
+from trailblazer.mip.log import LogAnalysis as MipLogAnalysis
 from trailblazer.mip.start import MipCli
-from trailblazer.mip.files import parse_config
-from trailblazer.mip.miplog import job_ids
+from trailblazer.mip import files as mip_files
+from trailblazer.mip import pipelinelog
+from trailblazer.balsamic.log import LogAnalysis as BalsamicLogAnalysis
+from trailblazer.balsamic.start import BalsamicCli
+from trailblazer.balsamic import files as balsamic_files
+from trailblazer.balsamic import pipelinelog
+from trailblazer.usalt.log import LogAnalysis as UsaltLogAnalysis
+from trailblazer.usalt.start import UsaltCli
+from trailblazer.usalt import files as usalt_files
+from trailblazer.usalt import pipelinelog
 from trailblazer.exc import MissingFileError, MipStartError
 from .utils import environ_email
 from .clean import clean
 from .delete import delete
 from .ls import ls_cmd
-from .check import check
+from .check import mip_check, balsamic_check, usalt_check
 
 LOG = logging.getLogger(__name__)
 
@@ -40,18 +48,74 @@ def base(context, config, database, root, log_level):
     context.obj['store'] = Store(context.obj['database'], context.obj['root'])
 
 
-@base.command('log')
+@base.command('mip_log')
 @click.option('-s', '--sampleinfo', type=click.Path(exists=True), help='sample info file')
 @click.option('-a', '--sacct', type=click.Path(exists=True), help='sacct job info file')
 @click.option('-q', '--quiet', is_flag=True, help='supress outputs')
 @click.argument('config', type=click.File())
 @click.pass_context
-def log_cmd(context, sampleinfo, sacct, quiet, config):
+def mip_log_cmd(context, sampleinfo, sacct, quiet, config):
     """Log an analysis.
 
-    CONFIG: MIP config file for an analysis
+    CONFIG: pipeline config file for an analysis
     """
-    log_analysis = LogAnalysis(context.obj['store'])
+    log_analysis = MipLogAnalysis(context.obj['store'])
+    try:
+        new_run = log_analysis(config, sampleinfo=sampleinfo, sacct=sacct)
+    except MissingFileError as error:
+        click.echo(click.style(f"Skipping, missing Sacct file: {error.message}", fg='yellow'))
+        return
+    except KeyError as error:
+        print(click.style(f"unexpected output, missing key: {error.args[0]}", fg='yellow'))
+        return
+    if new_run is None:
+        if not quiet:
+            click.echo(click.style('Analysis already logged', fg='yellow'))
+    else:
+        message = f"New log added: {new_run.family} ({new_run.id}) - {new_run.status}"
+        click.echo(click.style(message, fg='green'))
+
+
+@base.command('balsamic_log')
+@click.option('-s', '--sampleinfo', type=click.Path(exists=True), help='sample info file')
+@click.option('-a', '--sacct', type=click.Path(exists=True), help='sacct job info file')
+@click.option('-q', '--quiet', is_flag=True, help='supress outputs')
+@click.argument('config', type=click.File())
+@click.pass_context
+def balsamic_log_cmd(context, sampleinfo, sacct, quiet, config):
+    """Log an analysis.
+
+    CONFIG: pipeline config file for an analysis
+    """
+    log_analysis = BalsamicLogAnalysis(context.obj['store'])
+    try:
+        new_run = log_analysis(config, sampleinfo=sampleinfo, sacct=sacct)
+    except MissingFileError as error:
+        click.echo(click.style(f"Skipping, missing Sacct file: {error.message}", fg='yellow'))
+        return
+    except KeyError as error:
+        print(click.style(f"unexpected output, missing key: {error.args[0]}", fg='yellow'))
+        return
+    if new_run is None:
+        if not quiet:
+            click.echo(click.style('Analysis already logged', fg='yellow'))
+    else:
+        message = f"New log added: {new_run.family} ({new_run.id}) - {new_run.status}"
+        click.echo(click.style(message, fg='green'))
+
+
+@base.command('usalt_log')
+@click.option('-s', '--sampleinfo', type=click.Path(exists=True), help='sample info file')
+@click.option('-a', '--sacct', type=click.Path(exists=True), help='sacct job info file')
+@click.option('-q', '--quiet', is_flag=True, help='supress outputs')
+@click.argument('config', type=click.File())
+@click.pass_context
+def usalt_log_cmd(context, sampleinfo, sacct, quiet, config):
+    """Log an analysis.
+
+    CONFIG: pipeline config file for an analysis
+    """
+    log_analysis = UsaltLogAnalysis(context.obj['store'])
     try:
         new_run = log_analysis(config, sampleinfo=sampleinfo, sacct=sacct)
     except MissingFileError as error:
@@ -69,7 +133,8 @@ def log_cmd(context, sampleinfo, sacct, quiet, config):
 
 
 @base.command()
-@click.option('-c', '--mip-config', type=click.Path(exists=True), help='MIP config')
+@click.option('-c', '--mip-config', 'pipeline_config', type=click.Path(exists=True),
+              help='Pipeline config')
 @click.option('-e', '--email', help='email for logging user')
 @click.option('-p', '--priority', type=click.Choice(['low', 'normal', 'high']), default='normal')
 @click.option('-d', '--dryrun', is_flag=True, help='only generate SBATCH scripts')
@@ -77,18 +142,74 @@ def log_cmd(context, sampleinfo, sacct, quiet, config):
 @click.option('-sw', '--start-with', help='start the pipeline beginning with program, see format for program in mip.pl')
 @click.argument('family', required=False)
 @click.pass_context
-def start(context, mip_config, email, priority, dryrun, command, start_with, family):
+def mip_start(context, pipeline_config, email, priority, dryrun, command, start_with, family):
     """Start a new analysis."""
-    mip_cli = MipCli(context.obj['script'])
-    mip_config = mip_config or context.obj['mip_config']
+    pipeline_cli = MipCli(context.obj['script'])
+    pipeline_config = pipeline_config or context.obj['mip_config']
     email = email or environ_email()
-    kwargs = dict(config=mip_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
+    kwargs = dict(config=pipeline_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
     if command:
-        mip_command = mip_cli.build_command(**kwargs)
+        mip_command = pipeline_cli.build_command(**kwargs)
         click.echo(' '.join(mip_command))
     else:
         try:
-            mip_cli(**kwargs)
+            pipeline_cli(**kwargs)
+            if not dryrun:
+                context.obj['store'].add_pending(family, email=email)
+        except MipStartError as error:
+            click.echo(click.style(error.message, fg='red'))
+
+
+@base.command()
+@click.option('-c', '--balsamic-config', 'pipeline_config', type=click.Path(exists=True),
+              help='Pipeline config')
+@click.option('-e', '--email', help='email for logging user')
+@click.option('-p', '--priority', type=click.Choice(['low', 'normal', 'high']), default='normal')
+@click.option('-d', '--dryrun', is_flag=True, help='only generate SBATCH scripts')
+@click.option('--command', is_flag=True, help='only show the pipeline command')
+@click.option('-sw', '--start-with', help='start the pipeline beginning with program')
+@click.argument('family', required=False)
+@click.pass_context
+def balsamic_start(context, pipeline_config, email, priority, dryrun, command, start_with, family):
+    """Start a new analysis."""
+    pipeline_cli = BalsamicCli(context.obj['script'])
+    pipeline_config = pipeline_config or context.obj['balsamic_config']
+    email = email or environ_email()
+    kwargs = dict(config=pipeline_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
+    if command:
+        pipeline_command = pipeline_cli.build_command(**kwargs)
+        click.echo(' '.join(pipeline_command))
+    else:
+        try:
+            pipeline_cli(**kwargs)
+            if not dryrun:
+                context.obj['store'].add_pending(family, email=email)
+        except MipStartError as error:
+            click.echo(click.style(error.message, fg='red'))
+
+
+@base.command()
+@click.option('-c', '--usalt-config', 'pipeline_config', type=click.Path(exists=True),
+              help='Pipeline config')
+@click.option('-e', '--email', help='email for logging user')
+@click.option('-p', '--priority', type=click.Choice(['low', 'normal', 'high']), default='normal')
+@click.option('-d', '--dryrun', is_flag=True, help='only generate SBATCH scripts')
+@click.option('--command', is_flag=True, help='only show the pipeline command')
+@click.option('-sw', '--start-with', help='start the pipeline beginning with program')
+@click.argument('family', required=False)
+@click.pass_context
+def usalt_start(context, pipeline_config, email, priority, dryrun, command, start_with, family):
+    """Start a new analysis."""
+    pipeline_cli = UsaltCli(context.obj['script'])
+    pipeline_config = pipeline_config or context.obj['usalt_config']
+    email = email or environ_email()
+    kwargs = dict(config=pipeline_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
+    if command:
+        pipeline_command = pipeline_cli.build_command(**kwargs)
+        click.echo(' '.join(pipeline_command))
+    else:
+        try:
+            pipeline_cli(**kwargs)
             if not dryrun:
                 context.obj['store'].add_pending(family, email=email)
         except MipStartError as error:
@@ -119,14 +240,43 @@ def init(context, reset, force):
 @base.command()
 @click.argument('root_dir', type=click.Path(exists=True), required=False)
 @click.pass_context
-def scan(context, root_dir):
+def mip_scan(context, root_dir):
     """Scan a directory for analyses."""
     root_dir = root_dir or context.obj['root']
     config_files = Path(root_dir).glob('*/analysis/*_config.yaml')
     for config_file in config_files:
         LOG.debug("found analysis config: %s", config_file)
         with config_file.open() as stream:
-            context.invoke(log_cmd, config=stream, quiet=True)
+            context.invoke(mip_log_cmd, config=stream, quiet=True)
+
+    context.obj['store'].track_update()
+
+
+@base.command()
+@click.argument('root_dir', type=click.Path(exists=True), required=False)
+@click.pass_context
+def balsamic_scan(context, root_dir):
+    """Scan a directory for analyses."""
+    root_dir = root_dir or context.obj['root']
+    config_files = Path(root_dir).glob('*/analysis/*_config.yaml')
+    for config_file in config_files:
+        LOG.debug("found analysis config: %s", config_file)
+        with config_file.open() as stream:
+            context.invoke(balsamic_log_cmd, config=stream, quiet=True)
+
+    context.obj['store'].track_update()
+
+@base.command()
+@click.argument('root_dir', type=click.Path(exists=True), required=False)
+@click.pass_context
+def usalt_scan(context, root_dir):
+    """Scan a directory for analyses."""
+    root_dir = root_dir or context.obj['root']
+    config_files = Path(root_dir).glob('*/analysis/*_config.yaml')
+    for config_file in config_files:
+        LOG.debug("found analysis config: %s", config_file)
+        with config_file.open() as stream:
+            context.invoke(usalt_log_cmd, config=stream, quiet=True)
 
     context.obj['store'].track_update()
 
@@ -151,7 +301,7 @@ def user(context, name, email):
 @click.option('-j', '--jobs', is_flag=True, help='only print job ids')
 @click.argument('analysis_id', type=int)
 @click.pass_context
-def cancel(context, jobs, analysis_id):
+def mip_cancel(context, jobs, analysis_id):
     """Cancel all jobs in a run."""
     analysis_obj = context.obj['store'].analysis(analysis_id)
     if analysis_obj is None:
@@ -164,7 +314,7 @@ def cancel(context, jobs, analysis_id):
     config_path = Path(analysis_obj.config_path)
     with config_path.open() as config_stream:
         config_raw = ruamel.yaml.safe_load(config_stream)
-    config_data = parse_config(config_raw)
+    config_data = mip_files.parse_config(config_raw)
 
     log_path = Path(f"{config_data['log_path']}")
     if not log_path.exists():
@@ -172,7 +322,89 @@ def cancel(context, jobs, analysis_id):
         context.abort()
 
     with log_path.open() as log_stream:
-        all_jobs = job_ids(log_stream)
+        all_jobs = pipelinelog.job_ids(log_stream)
+
+    if jobs:
+        for job_id in all_jobs:
+            click.echo(job_id)
+    else:
+        for job_id in all_jobs:
+            LOG.debug(f"cancelling job: {job_id}")
+            process = subprocess.Popen(['scancel', job_id])
+            process.wait()
+
+        analysis_obj.status = 'canceled'
+        context.obj['store'].commit()
+        click.echo('cancelled analysis successfully!')
+
+
+@base.command()
+@click.option('-j', '--jobs', is_flag=True, help='only print job ids')
+@click.argument('analysis_id', type=int)
+@click.pass_context
+def balsamic_cancel(context, jobs, analysis_id):
+    """Cancel all jobs in a run."""
+    analysis_obj = context.obj['store'].analysis(analysis_id)
+    if analysis_obj is None:
+        click.echo('analysis not found')
+        context.abort()
+    elif analysis_obj.status != 'running':
+        click.echo(f"analysis not running: {analysis_obj.status}")
+        context.abort()
+
+    config_path = Path(analysis_obj.config_path)
+    with config_path.open() as config_stream:
+        config_raw = ruamel.yaml.safe_load(config_stream)
+    config_data = balsamic_files.parse_config(config_raw)
+
+    log_path = Path(f"{config_data['log_path']}")
+    if not log_path.exists():
+        click.echo(f"missing Balsamic log file: {log_path}")
+        context.abort()
+
+    with log_path.open() as log_stream:
+        all_jobs = pipelinelog.job_ids(log_stream)
+
+    if jobs:
+        for job_id in all_jobs:
+            click.echo(job_id)
+    else:
+        for job_id in all_jobs:
+            LOG.debug(f"cancelling job: {job_id}")
+            process = subprocess.Popen(['scancel', job_id])
+            process.wait()
+
+        analysis_obj.status = 'canceled'
+        context.obj['store'].commit()
+        click.echo('cancelled analysis successfully!')
+
+
+@base.command()
+@click.option('-j', '--jobs', is_flag=True, help='only print job ids')
+@click.argument('analysis_id', type=int)
+@click.pass_context
+def usalt_cancel(context, jobs, analysis_id):
+    """Cancel all jobs in a run."""
+    analysis_obj = context.obj['store'].analysis(analysis_id)
+    if analysis_obj is None:
+        click.echo('analysis not found')
+        context.abort()
+    elif analysis_obj.status != 'running':
+        click.echo(f"analysis not running: {analysis_obj.status}")
+        context.abort()
+
+    config_path = Path(analysis_obj.config_path)
+    with config_path.open() as config_stream:
+        config_raw = ruamel.yaml.safe_load(config_stream)
+    config_data = usalt_files.parse_config(config_raw)
+
+    log_path = Path(f"{config_data['log_path']}")
+    if not log_path.exists():
+        click.echo(f"missing usalt log file: {log_path}")
+        context.abort()
+
+    with log_path.open() as log_stream:
+        all_jobs = pipelinelog.job_ids(log_stream)
 
     if jobs:
         for job_id in all_jobs:
@@ -191,4 +423,6 @@ def cancel(context, jobs, analysis_id):
 base.add_command(delete)
 base.add_command(ls_cmd)
 base.add_command(clean)
-base.add_command(check)
+base.add_command(mip_check)
+base.add_command(balsamic_check)
+base.add_command(usalt_check)

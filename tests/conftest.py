@@ -8,7 +8,7 @@ import ruamel.yaml
 
 from trailblazer.cli import base
 from trailblazer.mip import sacct, files as files_api
-from trailblazer.log import LogAnalysis
+from trailblazer.mip.log import LogAnalysis
 from trailblazer.store import Store
 
 
