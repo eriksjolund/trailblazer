@@ -39,7 +39,7 @@ LOG = logging.getLogger(__name__)
 @click.version_option(trailblazer.__version__, prog_name=trailblazer.__title__)
 @click.pass_context
 def base(context, config, database, root, log_level):
-    """Trailblazer - Simplify running MIP!"""
+    """Trailblazer - Simplify running Pipelines!"""
     coloredlogs.install(level=log_level)
 
     context.obj = ruamel.yaml.safe_load(config) if config else {}
@@ -172,7 +172,7 @@ def mip_start(context, pipeline_config, email, priority, dryrun, command, start_
 @click.pass_context
 def balsamic_start(context, pipeline_config, email, priority, dryrun, command, start_with, family):
     """Start a new analysis."""
-    pipeline_cli = BalsamicCli(context.obj['script'])
+    pipeline_cli = BalsamicCli(context.obj['balsamic_script'])
     pipeline_config = pipeline_config or context.obj['balsamic_config']
     email = email or environ_email()
     kwargs = dict(config=pipeline_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
@@ -200,7 +200,7 @@ def balsamic_start(context, pipeline_config, email, priority, dryrun, command, s
 @click.pass_context
 def usalt_start(context, pipeline_config, email, priority, dryrun, command, start_with, family):
     """Start a new analysis."""
-    pipeline_cli = UsaltCli(context.obj['script'])
+    pipeline_cli = UsaltCli(context.obj['usalt_script'])
     pipeline_config = pipeline_config or context.obj['usalt_config']
     email = email or environ_email()
     kwargs = dict(config=pipeline_config, family=family, priority=priority, email=email, dryrun=dryrun, start_with=start_with)
