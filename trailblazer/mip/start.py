@@ -58,8 +58,6 @@ class MipCli(object):
                     command.append(value)
         return command
 
-
-
     def execute(self, command):
         """Start a new MIP run."""
         process = subprocess.Popen(
