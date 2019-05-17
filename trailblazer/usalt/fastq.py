@@ -18,9 +18,16 @@ class FastqHandler:
         index = index if index else 'XXXXXX'
         return f"{lane}_{date_str}_{flowcell}_{sample}_{index}_{read}.fastq.gz"
 
-    def link(self, case: str, sample: str, analysis_type: str, files: List[str]):
+    def link(self, case: str, sample: str, files: List[str]):
         """Link FASTQ files for a sample."""
-        root_dir = Path(self.families_dir) / case / analysis_type / sample / 'fastq'
+
+        print(case, sample, files)
+
+        # The fastq files should be linked to /home/proj/production/microbial/fastq/<project>/<sample>/*.fastq.gz.
+        root_dir = Path(self.families_dir) / 'fastq' / case / sample
+
+        print (root_dir)
+
         root_dir.mkdir(parents=True, exist_ok=True)
         for fastq_data in files:
             fastq_path = Path(fastq_data['path'])
@@ -32,6 +39,7 @@ class FastqHandler:
                 undetermined=fastq_data['undetermined'],
             )
             dest_path = root_dir / fastq_name
+            print(dest_path)
             if not dest_path.exists():
                 log.info(f"linking: {fastq_path} -> {dest_path}")
                 dest_path.symlink_to(fastq_path)
