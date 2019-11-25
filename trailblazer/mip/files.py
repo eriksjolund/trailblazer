@@ -156,7 +156,7 @@ def parse_sampleinfo_rna(data: dict) -> dict:
         sample = {
             'id': sample_id,
             'bam': sample_data['most_complete_bam']['path'],
-
+            'star_fusion': sample_data['recipe']['star_fusion']['path'],
             'bootstrap_vcf': _get_multiple_paths(sample_data, 'bootstrapann'),
             'gatk_asereadcounter': _get_multiple_paths(sample_data, 'gatk_asereadcounter'),
             'gatk_baserecalibration': _get_multiple_paths(sample_data, 'gatk_baserecalibration'),
@@ -164,8 +164,6 @@ def parse_sampleinfo_rna(data: dict) -> dict:
             'mark_duplicates': _get_multiple_paths(sample_data, 'markduplicates'),
             'salmon_quant': _get_multiple_paths(sample_data, 'salmon_quant'),
             'stringtie_ar': _get_multiple_paths(sample_data, 'stringtie_ar'),
-
-            'star_fusion': sample_data['recipe']['star_fusion']['path'],
          }
 
         outdata['samples'].append(sample)
@@ -174,9 +172,14 @@ def parse_sampleinfo_rna(data: dict) -> dict:
 
 
 def _get_multiple_paths(sample_data: dict, path_key: str) -> list:
-    """
-    # TODO: better description...
-    get all paths to files for keys that may have 0 to n file paths
+    """Get all paths to files of a given type. Use this method if the exact filename is not
+    known beforehand.
+    Args:
+        sample_data (dict): YAML file containing qc sample info
+        path_key (str)    : Type of file paths to retrieve
+
+    Returns:
+        list: paths to all files of given type
     """
     paths = [path['path'] for path in sample_data['recipe'][path_key].values()]
 
